@@ -1,0 +1,18 @@
+{
+  "name": "docs-auditor",
+  "version": "0.1.1",
+  "license": "MIT",
+  "description": "Zero-dependency, read-only docs health auditor for many projects at once.",
+  "bin": {
+    "docs-auditor": "docs-auditor.js"
+  },
+  "scripts": {
+    "audit": "node docs-auditor.js",
+    "audit:json": "node docs-auditor.js --json",
+    "test": "node --test test/audit.test.js",
+    "verify": "node verify-docs.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

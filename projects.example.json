@@ -1,0 +1,31 @@
+{
+  "projects": [
+    {
+      "name": "web-app",
+      "root": "../web-app",
+      "docs": {
+        "agents": "AGENTS.md",
+        "readme": "README.md",
+        "index": "docs/00-index.md",
+        "state": "docs/CURRENT_STATE.md",
+        "codemap": "docs/CODEMAP.md",
+        "changelog": "docs/CHANGELOG.md"
+      },
+      "required": ["agents", "readme", "index", "state", "codemap", "changelog"],
+      "sources": ["src"],
+      "gate": { "script": "verify-docs.js", "config": "doc-check.json" }
+    },
+    {
+      "name": "game",
+      "root": "../game",
+      "docs": {
+        "readme": "README.md",
+        "state": "docs/STATUS.md",
+        "codemap": "docs/MAP.md"
+      },
+      "required": ["readme", "state", "codemap"],
+      "warnDays": 14,
+      "failDays": 60
+    }
+  ]
+}
