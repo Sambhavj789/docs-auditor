@@ -36,6 +36,13 @@ node verify-docs.js
 required docs, front matter, index links, relative links, every source file in `CODEMAP.md`, and then
 runs the test suite. `doc-check.json` points it at `sources: ["."]`.
 
+## Company-wide gate
+
+`npm run audit:strict` is the gate: warnings fail too. `npm run audit:gate` adds
+`--run-gates`, which executes each project's configured verify script. Run the strict gate after
+any docs migration and before a multi-project review; the current six-project set is green
+(2026-10-22).
+
 ## Adding a project
 
 Add an object to `projects.json`:
@@ -62,5 +69,5 @@ Run `node docs-auditor.js --project example` and inspect each finding before com
 ## Release
 
 1. Update `docs/CURRENT_STATE.md` and `docs/CHANGELOG.md`.
-2. Run `node --test test/audit.test.js`, `node verify-docs.js`, and `node docs-auditor.js`.
+2. Run `node --test test/audit.test.js`, `node verify-docs.js`, and `npm run audit:strict`.
 3. Bump `package.json` only when the CLI or report schema changes.

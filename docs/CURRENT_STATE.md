@@ -12,6 +12,8 @@ updated: 2026-10-22
 - Checks required docs, front matter, state age, index coverage, relative links, CODEMAP gaps, and
   gate presence.
 - Text table and `--json`; `--project`, `--strict`, `--run-gates`, `--verbose`.
+- Gate scripts: `npm run audit:strict` (warnings fail) and `npm run audit:gate` (strict +
+  each project's verify gate). All six projects are OK under `--strict` (2026-10-22).
 - 8/8 tests pass; own docs gate passes.
 
 ## Does not exist

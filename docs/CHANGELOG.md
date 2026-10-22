@@ -6,6 +6,11 @@ updated: 2026-10-22
 
 # Changelog
 
+## Unreleased — 2026-10-22
+
+- Added `npm run audit:strict` and `npm run audit:gate` as the company-wide docs gate.
+- Backfilled missing front matter in three legacy projects; all six now pass `--strict`.
+
 ## 0.1.1 — 2026-10-22
 
 - Fix: a link with a stray `%` (e.g. `100%.md`) crashed the whole audit with exit 2; it is now

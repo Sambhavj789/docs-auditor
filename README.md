@@ -16,6 +16,13 @@ node docs-auditor.js --project web-app
 node docs-auditor.js --strict --run-gates
 ```
 
+Gate scripts (same commands, for CI or a cron):
+
+```powershell
+npm run audit:strict   # exit 1 on warnings too
+npm run audit:gate     # strict + run each project's verify gate
+```
+
 Exit codes: `0` green or warnings, `1` red, `2` config error. `--strict` turns warnings into exit 1;
 `--run-gates` actually runs each configured verify script (slower, not the default).
 

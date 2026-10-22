@@ -9,6 +9,8 @@
   "scripts": {
     "audit": "node docs-auditor.js",
     "audit:json": "node docs-auditor.js --json",
+    "audit:strict": "node docs-auditor.js --strict",
+    "audit:gate": "node docs-auditor.js --strict --run-gates",
     "test": "node --test test/audit.test.js",
     "verify": "node verify-docs.js"
   },
