@@ -438,11 +438,62 @@ function formatText(report, options) {
   return lines.join('\n');
 }
 
+function escapeCell(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .replace(/\|/g, '\\|')
+    .replace(/\r?\n/g, ' ');
+}
+
+function formatMarkdown(report, options) {
+  const opts = options || {};
+  const lines = [];
+  lines.push('generated: ' + (report.generatedAt || new Date().toISOString()));
+  lines.push('');
+  lines.push('| project | status | state | docs | links | gate |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
+
+  for (const project of report.projects) {
+    const state = project.state
+      ? project.state.updated
+        ? project.state.updated + ' (' + project.state.ageDays + 'd)'
+        : 'undated'
+      : 'no state';
+    const gate = project.gate ? project.gate.status : 'none';
+    const cells = [
+      project.name,
+      project.status.toUpperCase(),
+      state,
+      project.metrics.docsPresent + '/' + project.metrics.docs,
+      project.metrics.linksChecked,
+      gate
+    ];
+    lines.push('| ' + cells.map(escapeCell).join(' | ') + ' |');
+  }
+
+  const findings = [];
+  for (const project of report.projects) {
+    for (const finding of project.findings) {
+      if (!opts.verbose && finding.level === 'info') continue;
+      findings.push(
+        '- **' + project.name + '** ' + finding.level.toUpperCase() +
+        ' [' + finding.code + '] ' + String(finding.message).replace(/\r?\n/g, ' ')
+      );
+    }
+  }
+  if (findings.length) {
+    lines.push('');
+    lines.push(...findings);
+  }
+
+  return lines.join('\n');
+}
+
 module.exports = {
   loadConfig,
   checkProject,
   auditAll,
   formatText,
+  formatMarkdown,
   parseFrontMatter,
   checkLinks,
   walkSources,

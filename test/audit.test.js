@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { checkProject, checkLinks, loadConfig, parseFrontMatter } = require('../audit');
+const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown } = require('../audit');
 
 function tempProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-auditor-'));
@@ -187,4 +187,43 @@ test('a stray % or an angle-bracket path does not crash the link check', () => {
   const links = checkLinks(root, ['a.md']);
   assert.equal(links.checked, 3);
   assert.deepEqual(links.broken, ['a.md -> 100%.md', 'a.md -> <no such.md>']);
+});
+
+test('formatMarkdown renders a table header and FAIL findings as bullets', () => {
+  const report = {
+    generatedAt: '2026-10-22T12:00:00.000Z',
+    config: '/tmp/projects.json',
+    summary: { projects: 2, ok: 1, warn: 0, fail: 1 },
+    projects: [
+      {
+        name: 'clean-app',
+        status: 'ok',
+        state: { file: 'docs/CURRENT_STATE.md', updated: '2026-10-22', ageDays: 0 },
+        counts: { fail: 0, warn: 0, info: 0 },
+        metrics: { docs: 4, docsPresent: 4, linksChecked: 3, brokenLinks: 0, sources: 0, unmapped: 0 },
+        findings: [],
+        gate: { script: 'verify-docs.js', status: 'pass' }
+      },
+      {
+        name: 'pipe|app',
+        status: 'fail',
+        state: null,
+        counts: { fail: 1, warn: 0, info: 0 },
+        metrics: { docs: 2, docsPresent: 1, linksChecked: 7, brokenLinks: 1, sources: 0, unmapped: 0 },
+        findings: [{ level: 'fail', code: 'missing-doc', message: 'missing required: README.md' }],
+        gate: null
+      }
+    ]
+  };
+
+  const lines = formatMarkdown(report).split('\n');
+  assert.equal(lines[0], 'generated: 2026-10-22T12:00:00.000Z');
+  assert.ok(lines.includes('| project | status | state | docs | links | gate |'));
+  assert.ok(lines.includes('| --- | --- | --- | --- | --- | --- |'));
+  assert.ok(lines.includes('| pipe\\|app | FAIL | no state | 1/2 | 7 | none |'));
+  assert.ok(
+    lines.some((line) => line.startsWith('- ') && line.includes('FAIL') && line.includes('[missing-doc]')),
+    'FAIL finding appears as a bullet'
+  );
+  assert.equal(lines.filter((line) => line.startsWith('- ')).length, 1);
 });

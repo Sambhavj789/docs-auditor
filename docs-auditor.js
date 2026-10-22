@@ -2,7 +2,7 @@
 'use strict';
 
 const path = require('path');
-const { loadConfig, auditAll, formatText } = require('./audit');
+const { loadConfig, auditAll, formatText, formatMarkdown } = require('./audit');
 const pkg = require('./package.json');
 
 function usage() {
@@ -15,6 +15,7 @@ function usage() {
     '  --config <path>   Config file (default: projects.json next to this script)',
     '  --project <name>  Audit one project',
     '  --json            Print machine-readable JSON',
+    '  --md              Print a Markdown table instead of the text report',
     '  --strict          Exit 1 on warnings too',
     '  --run-gates       Run each configured verify gate',
     '  --verbose         Show info findings',
@@ -28,6 +29,7 @@ function parseArgs(argv) {
   const opts = {
     config: path.join(__dirname, 'projects.json'),
     json: false,
+    md: false,
     strict: false,
     runGates: false,
     verbose: false
@@ -37,6 +39,7 @@ function parseArgs(argv) {
     if (arg === '--help' || arg === '-h') opts.help = true;
     else if (arg === '--version' || arg === '-v') opts.version = true;
     else if (arg === '--json') opts.json = true;
+    else if (arg === '--md') opts.md = true;
     else if (arg === '--strict') opts.strict = true;
     else if (arg === '--run-gates') opts.runGates = true;
     else if (arg === '--verbose') opts.verbose = true;
@@ -50,6 +53,7 @@ function parseArgs(argv) {
     }
     else throw new Error('Unknown option: ' + arg);
   }
+  if (opts.json && opts.md) throw new Error('Use either --json or --md, not both');
   return opts;
 }
 
@@ -87,6 +91,7 @@ function main() {
   }
 
   if (opts.json) console.log(JSON.stringify(report, null, 2));
+  else if (opts.md) console.log(formatMarkdown(report, opts));
   else console.log(formatText(report, opts));
 
   const failed = report.summary.fail > 0 || (opts.strict && report.summary.warn > 0);

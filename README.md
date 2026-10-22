@@ -12,6 +12,7 @@ copy projects.example.json projects.json   # then point the roots at your projec
 ```powershell
 node docs-auditor.js
 node docs-auditor.js --json
+node docs-auditor.js --md
 node docs-auditor.js --project web-app
 node docs-auditor.js --strict --run-gates
 ```
@@ -48,6 +49,26 @@ mobile    FAIL  state 2026-10-21 (1d)     docs 4/6  links 54  no gate  1 fail
 
 Warnings are mostly missing front matter on legacy docs. Do not "fix" a finding by renaming an
 existing file; add the missing entry point or map the existing one.
+
+### Markdown
+
+`--md` prints a Markdown table instead of the text report: one row per project, followed by one
+bullet per finding. The first line is `generated: <ISO date>`, so the output can be pasted into a
+PR comment or a docs page. Pipe characters inside cells are escaped as `\|`.
+
+```markdown
+generated: 2026-10-22T12:00:00.000Z
+
+| project | status | state | docs | links | gate |
+| --- | --- | --- | --- | --- | --- |
+| web-app | OK | 2026-10-22 (0d) | 11/11 | 7 | present |
+| mobile | FAIL | 2026-10-21 (1d) | 4/6 | 54 | none |
+
+- **mobile** FAIL [missing-doc] missing required: README.md, docs/00-index.md
+```
+
+`--md` replaces the text report; it cannot be combined with `--json`. `--verbose` adds info
+findings as bullets, as it does for the text report.
 
 ## Config
 

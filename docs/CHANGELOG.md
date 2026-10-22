@@ -8,6 +8,9 @@ updated: 2026-10-22
 
 ## Unreleased — 2026-10-22
 
+- Added `--md`: prints the report as a Markdown table (project, status, state date and age, docs,
+  links, gate) followed by one bullet per finding. The first line is `generated: <ISO date>` and
+  pipes inside cells are escaped as `\|`. `formatMarkdown(report)` is exported from `audit.js`.
 - Added `npm run audit:strict` and `npm run audit:gate` as the company-wide docs gate.
 - Backfilled missing front matter in three legacy projects; all six now pass `--strict`.
 
