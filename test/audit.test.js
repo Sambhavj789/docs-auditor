@@ -83,6 +83,25 @@ function project(root) {
 
 const NOW = '2026-10-22T12:00:00Z';
 
+function datedProject(root, updated) {
+  write(root, 'docs/CURRENT_STATE.md', [
+    '---',
+    'title: Current State',
+    'status: active',
+    'updated: ' + updated,
+    '---',
+    '# Current State',
+    '',
+    'Current state detail. '.repeat(10)
+  ].join('\n'));
+  const fixture = project(root);
+  // Default thresholds are lenient enough that a 12-day-old state is still green;
+  // the CLI overrides only have to tighten them.
+  fixture.warnDays = 20;
+  fixture.failDays = 30;
+  return fixture;
+}
+
 test('clean project is green', () => {
   const root = tempProject();
   cleanProject(root);
@@ -221,6 +240,34 @@ test('a stray % or an angle-bracket path does not crash the link check', () => {
   const links = checkLinks(root, ['a.md']);
   assert.equal(links.checked, 3);
   assert.deepEqual(links.broken, ['a.md -> 100%.md', 'a.md -> <no such.md>']);
+});
+
+test('a 12-day-old state is ok under the project default thresholds', () => {
+  const root = tempProject();
+  cleanProject(root);
+  const result = checkProject(datedProject(root, '2026-10-10'), { now: NOW });
+  assert.equal(result.state.ageDays, 12);
+  assert.equal(result.status, 'ok');
+  assert.equal(result.counts.warn, 0);
+  assert.equal(result.counts.fail, 0);
+});
+
+test('warnDays override turns a 12-day-old state into a state-age warning', () => {
+  const root = tempProject();
+  cleanProject(root);
+  const result = checkProject(datedProject(root, '2026-10-10'), { now: NOW, warnDays: 5 });
+  assert.equal(result.status, 'warn');
+  assert.equal(result.counts.warn, 1);
+  assert.ok(result.findings.some((f) => f.code === 'state-age'));
+});
+
+test('failDays override turns a 12-day-old state into a state-stale failure', () => {
+  const root = tempProject();
+  cleanProject(root);
+  const result = checkProject(datedProject(root, '2026-10-10'), { now: NOW, failDays: 5 });
+  assert.equal(result.status, 'fail');
+  assert.equal(result.counts.fail, 1);
+  assert.ok(result.findings.some((f) => f.code === 'state-stale'));
 });
 
 test('formatMarkdown renders a table header and FAIL findings as bullets', () => {
