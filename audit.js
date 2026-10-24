@@ -213,8 +213,14 @@ function addFinding(result, level, code, message) {
   result.counts[level]++;
 }
 
+function isPositiveInt(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
 function checkProject(project, options) {
   const root = project.root;
+  const warnDays = isPositiveInt(options.warnDays) ? options.warnDays : project.warnDays;
+  const failDays = isPositiveInt(options.failDays) ? options.failDays : project.failDays;
   const result = {
     name: project.name,
     root,
@@ -309,12 +315,12 @@ function checkProject(project, options) {
       if (day !== null) {
         const age = todayNumber(options.now) - day;
         result.state.ageDays = age;
-        if (age > project.failDays) {
+        if (age > failDays) {
           addFinding(result, 'fail', 'state-stale',
-            stateRel + ' updated ' + updated + ' (' + age + ' days old, limit ' + project.failDays + ')');
-        } else if (age > project.warnDays) {
+            stateRel + ' updated ' + updated + ' (' + age + ' days old, limit ' + failDays + ')');
+        } else if (age > warnDays) {
           addFinding(result, 'warn', 'state-age',
-            stateRel + ' updated ' + updated + ' (' + age + ' days old, warn after ' + project.warnDays + ')');
+            stateRel + ' updated ' + updated + ' (' + age + ' days old, warn after ' + warnDays + ')');
         }
       } else {
         addFinding(result, 'warn', 'state-undated', stateRel + ' has no valid updated date');

@@ -18,11 +18,22 @@ function usage() {
     '  --md              Print a Markdown table instead of the text report',
     '  --strict          Exit 1 on warnings too',
     '  --run-gates       Run each configured verify gate',
+    '  --warn-days <n>   Warn when state is older than n days (overrides projects.json)',
+    '  --fail-days <n>   Fail when state is older than n days (overrides projects.json)',
     '  --verbose         Show info findings',
     '  --help            Show this help',
     '',
     'Exit: 0 green/warnings, 1 red (or warnings with --strict), 2 config error.'
   ].join('\n');
+}
+
+function positiveDays(flag, raw) {
+  const text = raw === undefined || raw === null ? '' : String(raw).trim();
+  const value = /^\d+$/.test(text) ? Number(text) : NaN;
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(flag + ' needs a positive integer');
+  }
+  return value;
 }
 
 function parseArgs(argv) {
@@ -42,6 +53,8 @@ function parseArgs(argv) {
     else if (arg === '--md') opts.md = true;
     else if (arg === '--strict') opts.strict = true;
     else if (arg === '--run-gates') opts.runGates = true;
+    else if (arg === '--warn-days') opts.warnDays = positiveDays('--warn-days', argv[++i]);
+    else if (arg === '--fail-days') opts.failDays = positiveDays('--fail-days', argv[++i]);
     else if (arg === '--verbose') opts.verbose = true;
     else if (arg === '--config') {
       opts.config = argv[++i];

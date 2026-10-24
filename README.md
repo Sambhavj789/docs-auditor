@@ -15,6 +15,7 @@ node docs-auditor.js --json
 node docs-auditor.js --md
 node docs-auditor.js --project web-app
 node docs-auditor.js --strict --run-gates
+node docs-auditor.js --warn-days 3 --fail-days 14   # tighten thresholds for CI
 ```
 
 Gate scripts (same commands, for CI or a cron):
@@ -27,11 +28,15 @@ npm run audit:gate     # strict + run each project's verify gate
 Exit codes: `0` green or warnings, `1` red, `2` config error. `--strict` turns warnings into exit 1;
 `--run-gates` actually runs each configured verify script (slower, not the default).
 
+`--warn-days <n>` and `--fail-days <n>` override the `warnDays`/`failDays` values in `projects.json`
+for every project in the run, so CI can tighten the thresholds without editing the local config.
+Both need a positive integer; anything else exits 2.
+
 ## What it checks
 
 - Required docs exist (mapped per project in `projects.json`, existing names kept).
 - Docs are non-trivial and, under `docs/`, have `title`, `status`, `updated` front matter.
-- State file age: warn after 7 days, red after 30 (overridable per project).
+- State file age: warn after 7 days, red after 30 (overridable per project, or per run with `--warn-days`/`--fail-days`).
 - Every required doc is linked from the project's index.
 - Relative Markdown links resolve (fenced/inline code is ignored).
 - Files under configured source roots appear in the project's CODEMAP.
