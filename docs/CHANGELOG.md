@@ -13,6 +13,7 @@ updated: 2026-10-22
   pipes inside cells are escaped as `\|`. `formatMarkdown(report)` is exported from `audit.js`.
 - Added `npm run audit:strict` and `npm run audit:gate` as the company-wide docs gate.
 - Backfilled missing front matter in three legacy projects; all six now pass `--strict`.
+- State date now prefers front matter `updated`, then a labelled date (e.g. `Updated 2026-10-20`) in the first 15 lines, then the newest date in the first 15 lines instead of the first date in the whole file.
 
 ## 0.1.1 — 2026-10-22
 
