@@ -154,6 +154,40 @@ test('state date falls back to a body label', () => {
   assert.ok(result.findings.some((f) => f.code === 'frontmatter-missing'));
 });
 
+test('a labelled updated date beats an older body date', () => {
+  const root = tempProject();
+  cleanProject(root);
+  write(root, 'docs/CURRENT_STATE.md', [
+    '# Current State',
+    '',
+    'History: the kickoff was 2025-01-01, long before this rewrite.',
+    '',
+    '> Updated 2026-10-20',
+    '',
+    'Body detail. '.repeat(10)
+  ].join('\n'));
+  const result = checkProject(project(root), { now: NOW });
+  assert.equal(result.state.updated, '2026-10-20');
+  assert.equal(result.state.ageDays, 2);
+});
+
+test('two unlabelled dates in the first 15 lines resolve to the newest', () => {
+  const root = tempProject();
+  cleanProject(root);
+  write(root, 'docs/CURRENT_STATE.md', [
+    '# Current State',
+    '',
+    'History: the kickoff was 2025-03-04.',
+    '',
+    'Snapshot taken 2026-10-19.',
+    '',
+    'Body detail. '.repeat(10)
+  ].join('\n'));
+  const result = checkProject(project(root), { now: NOW });
+  assert.equal(result.state.updated, '2026-10-19');
+  assert.equal(result.state.ageDays, 3);
+});
+
 test('missing front matter is a warning, not a crash', () => {
   const root = tempProject();
   cleanProject(root);

@@ -20,6 +20,10 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_WARN_DAYS = 7;
 const DEFAULT_FAIL_DAYS = 30;
 const MAX_LIST = 8;
+const STATE_DATE_LINES = 15;
+const DATE_ANYWHERE_RE = /\b\d{4}-\d{2}-\d{2}\b/g;
+const LABELLED_DATE_RE =
+  /(?:last\s+verified|last\s+updated|updated|as\s+of)\s*:?\s*\**\s*(\d{4}-\d{2}-\d{2})/i;
 
 function loadConfig(configPath) {
   const full = path.resolve(configPath || path.join(__dirname, 'projects.json'));
@@ -94,14 +98,30 @@ function todayNumber(now) {
   return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 86400000);
 }
 
+function headLines(text, count) {
+  const lines = (text || '').split(/\r?\n/);
+  return lines.slice(0, count).join('\n');
+}
+
+function newestDate(text) {
+  const matches = (text || '').match(DATE_ANYWHERE_RE) || [];
+  let newest = null;
+  for (const candidate of matches) {
+    const day = dayNumber(candidate);
+    if (day === null) continue;
+    if (newest === null || day > dayNumber(newest)) newest = candidate;
+  }
+  return newest;
+}
+
 function findUpdatedDate(text, frontMatter) {
   if (frontMatter && dayNumber(frontMatter.updated)) return frontMatter.updated;
-  const labelled = (text || '').match(
-    /(?:last\s+verified|last\s+updated|updated|as\s+of)\s*:?\s*\**\s*(\d{4}-\d{2}-\d{2})/i
-  );
+  // A history section can hold an old date, so only the head of the file is trusted,
+  // and the newest unlabelled date wins over the first one.
+  const head = headLines(text, STATE_DATE_LINES);
+  const labelled = head.match(LABELLED_DATE_RE);
   if (labelled && dayNumber(labelled[1])) return labelled[1];
-  const first = (text || '').match(/\b(\d{4}-\d{2}-\d{2})\b/);
-  return first && dayNumber(first[1]) ? first[1] : null;
+  return newestDate(head);
 }
 
 function walkSources(root, dirs) {
