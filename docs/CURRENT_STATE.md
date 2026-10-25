@@ -26,9 +26,10 @@ updated: 2026-10-22
 
 ## Next
 
-Done 2026-10-24 (don't re-queue): `--md` Markdown report (N-20261022-2), front-matter-first state date
-(T-02), `--warn-days` / `--fail-days` flags (T-06).
-
-1. **T-07:** `--warn-days` must be `>=` `--fail-days` — a smaller warn threshold can never fire, so reject it
-   with exit 2 and a clear message (worker-ready).
+1. **T-07:** `--warn-days` ko `--fail-days` se chhota hi rakho (warn chhota ho to kabhi fire hi nahi hota) —
+   worker branch `worker/da-warn-vs-fail` par built, founder ke merge ka wait.
 2. Consider a `--write` mode only after the read-only report has been stable for a while (not started, on purpose).
+
+Done 2026-10-24 (re-queue mat karo): `--md` Markdown report (N-20261022-2), front-matter-first state date (T-02),
+`--warn-days` / `--fail-days` flags (T-06).
+
