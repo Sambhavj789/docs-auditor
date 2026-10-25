@@ -26,6 +26,9 @@ updated: 2026-10-22
 
 ## Next
 
-1. `--md` report output.
-2. Prefer the newest date near the top of a state file when it has no `updated` label.
-3. Consider a `--write` mode only after the read-only report has been stable for a while.
+Done 2026-10-24 (don't re-queue): `--md` Markdown report (N-20261022-2), front-matter-first state date
+(T-02), `--warn-days` / `--fail-days` flags (T-06).
+
+1. **T-07:** `--warn-days` must be `>=` `--fail-days` — a smaller warn threshold can never fire, so reject it
+   with exit 2 and a clear message (worker-ready).
+2. Consider a `--write` mode only after the read-only report has been stable for a while (not started, on purpose).
