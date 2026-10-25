@@ -231,6 +231,14 @@ function checkProject(project, options) {
     findings: []
   };
 
+  // A warn threshold at or above fail can never fire: `state-stale` wins first.
+  // Warn level keeps an intentional CI tightening (e.g. `--fail-days 5`) from adding a
+  // second failure on top of the real one, while still surfacing the dead threshold.
+  if (warnDays >= failDays) {
+    addFinding(result, 'warn', 'threshold-order',
+      'warn-days must be less than fail-days (warn ' + warnDays + ', fail ' + failDays + ')');
+  }
+
   let rootStat;
   try {
     rootStat = fs.statSync(root);

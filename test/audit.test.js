@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown } = require('../audit');
 
@@ -268,6 +269,46 @@ test('failDays override turns a 12-day-old state into a state-stale failure', ()
   assert.equal(result.status, 'fail');
   assert.equal(result.counts.fail, 1);
   assert.ok(result.findings.some((f) => f.code === 'state-stale'));
+});
+
+test('a project whose warn/fail values cross is flagged as threshold-order', () => {
+  const root = tempProject();
+  cleanProject(root);
+  const fixture = datedProject(root, '2026-10-10');
+  fixture.failDays = 20;
+  const result = checkProject(fixture, { now: NOW, warnDays: 30 });
+  assert.equal(result.status, 'warn');
+  assert.equal(result.counts.warn, 1);
+  const finding = result.findings.find((f) => f.code === 'threshold-order');
+  assert.ok(finding);
+  assert.equal(finding.level, 'warn');
+  assert.ok(finding.message.startsWith('warn-days must be less than fail-days'));
+});
+
+test('a valid warn/fail pair keeps the report unchanged', () => {
+  const root = tempProject();
+  cleanProject(root);
+  const result = checkProject(datedProject(root, '2026-10-10'), { now: NOW, warnDays: 5, failDays: 20 });
+  assert.equal(result.status, 'warn');
+  assert.equal(result.counts.warn, 1);
+  assert.equal(result.counts.fail, 0);
+  assert.ok(!result.findings.some((f) => f.code === 'threshold-order'));
+  assert.ok(result.findings.some((f) => f.code === 'state-age' && f.message.includes('warn after 5')));
+});
+
+test('the CLI exits 2 when warn-days is not below fail-days', () => {
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const run = spawnSync(process.execPath, [script, '--warn-days', '10', '--fail-days', '5'], {
+    encoding: 'utf8'
+  });
+  assert.equal(run.status, 2);
+  assert.ok(run.stderr.includes('warn-days must be less than fail-days'));
+
+  const equal = spawnSync(process.execPath, [script, '--warn-days', '10', '--fail-days', '10'], {
+    encoding: 'utf8'
+  });
+  assert.equal(equal.status, 2);
+  assert.ok(equal.stderr.includes('warn-days must be less than fail-days'));
 });
 
 test('formatMarkdown renders a table header and FAIL findings as bullets', () => {
