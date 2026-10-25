@@ -26,9 +26,12 @@ updated: 2026-10-22
 
 ## Next
 
-1. **T-07:** `--warn-days` ko `--fail-days` se chhota hi rakho (warn chhota ho to kabhi fire hi nahi hota) —
-   worker branch `worker/da-warn-vs-fail` par built, founder ke merge ka wait.
-2. Consider a `--write` mode only after the read-only report has been stable for a while (not started, on purpose).
+1. Consider a `--write` mode only after the read-only report has been stable for a while (not started, on purpose).
+   Open question for the founder: kya `--write` chahiye bhi, ya report hamesha read-only rahe.
+
+Done 2026-10-25 (re-queue mat karo): T-07 — `--warn-days` ko `--fail-days` se chhota rakho; bad CLI pair exit 2 +
+`warn-days must be less than fail-days`, project value + flag ka mixed cross `threshold-order` warning deta hai
+(merged `ac3beef`, 17 tests + verify-docs 68/68 green).
 
 Done 2026-10-24 (re-queue mat karo): `--md` Markdown report (N-20261022-2), front-matter-first state date (T-02),
 `--warn-days` / `--fail-days` flags (T-06).
