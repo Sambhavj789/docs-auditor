@@ -67,6 +67,9 @@ function parseArgs(argv) {
     else throw new Error('Unknown option: ' + arg);
   }
   if (opts.json && opts.md) throw new Error('Use either --json or --md, not both');
+  if (opts.warnDays !== undefined && opts.failDays !== undefined && opts.warnDays >= opts.failDays) {
+    throw new Error('warn-days must be less than fail-days');
+  }
   return opts;
 }
 
