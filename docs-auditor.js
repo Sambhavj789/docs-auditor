@@ -16,6 +16,7 @@ function usage() {
     '  --project <name>  Audit one project',
     '  --json            Print machine-readable JSON',
     '  --md              Print a Markdown table instead of the text report',
+    '  --quiet           Only show projects that are not OK (text and --md)',
     '  --strict          Exit 1 on warnings too',
     '  --run-gates       Run each configured verify gate',
     '  --warn-days <n>   Warn when state is older than n days (overrides projects.json)',
@@ -41,6 +42,7 @@ function parseArgs(argv) {
     config: path.join(__dirname, 'projects.json'),
     json: false,
     md: false,
+    quiet: false,
     strict: false,
     runGates: false,
     verbose: false
@@ -51,6 +53,7 @@ function parseArgs(argv) {
     else if (arg === '--version' || arg === '-v') opts.version = true;
     else if (arg === '--json') opts.json = true;
     else if (arg === '--md') opts.md = true;
+    else if (arg === '--quiet') opts.quiet = true;
     else if (arg === '--strict') opts.strict = true;
     else if (arg === '--run-gates') opts.runGates = true;
     else if (arg === '--warn-days') opts.warnDays = positiveDays('--warn-days', argv[++i]);

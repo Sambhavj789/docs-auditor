@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown } = require('../audit');
+const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown, formatText } = require('../audit');
 
 function tempProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-auditor-'));
@@ -309,6 +309,158 @@ test('the CLI exits 2 when warn-days is not below fail-days', () => {
   });
   assert.equal(equal.status, 2);
   assert.ok(equal.stderr.includes('warn-days must be less than fail-days'));
+});
+
+function quietProject(name, status, findings) {
+  return {
+    name,
+    status,
+    state: { file: 'docs/CURRENT_STATE.md', updated: '2026-10-22', ageDays: 0 },
+    counts: {
+      fail: status === 'fail' ? 1 : 0,
+      warn: status === 'warn' ? 1 : 0,
+      info: 0
+    },
+    metrics: { docs: 4, docsPresent: 4, linksChecked: 2, brokenLinks: 0, sources: 0, unmapped: 0 },
+    findings: findings || [],
+    gate: null
+  };
+}
+
+function quietReport() {
+  return {
+    generatedAt: '2026-10-22T12:00:00.000Z',
+    config: '/tmp/projects.json',
+    summary: { projects: 3, ok: 2, warn: 1, fail: 0 },
+    projects: [
+      quietProject('clean-app', 'ok'),
+      quietProject('games', 'ok'),
+      quietProject('legacy-app', 'warn', [
+        {
+          level: 'warn',
+          code: 'state-age',
+          message: 'docs/CURRENT_STATE.md updated 2026-10-01 (21 days old, warn after 7)'
+        }
+      ])
+    ]
+  };
+}
+
+test('default text output still lists every project', () => {
+  const text = formatText(quietReport());
+  assert.ok(text.includes('docs-auditor — 3 project(s)'));
+  assert.ok(text.includes('clean-app'));
+  assert.ok(text.includes('games'));
+  assert.ok(text.includes('legacy-app'));
+  assert.equal(text.split('\n').pop(), '3 projects — 2 ok, 1 warn, 0 fail');
+});
+
+test('quiet text output keeps only warn and fail projects plus the summary', () => {
+  const text = formatText(quietReport(), { quiet: true });
+  const lines = text.split('\n');
+  assert.ok(lines.some((line) => line.startsWith('legacy-app')));
+  assert.ok(lines.some((line) => line.includes('[state-age]')));
+  assert.ok(!text.includes('clean-app'));
+  assert.ok(!text.includes('games'));
+  assert.ok(!text.includes('docs-auditor —'));
+  assert.equal(lines[lines.length - 1], '3 projects — 2 ok, 1 warn, 0 fail');
+  assert.equal(lines.filter((line) => /^\S+\s+(WARN|FAIL)/.test(line)).length, 1);
+});
+
+test('quiet text output collapses an all-green report to one line', () => {
+  const report = {
+    generatedAt: '2026-10-22T12:00:00.000Z',
+    config: '/tmp/projects.json',
+    summary: { projects: 3, ok: 3, warn: 0, fail: 0 },
+    projects: [
+      quietProject('one', 'ok'),
+      quietProject('two', 'ok'),
+      quietProject('three', 'ok')
+    ]
+  };
+  assert.equal(formatText(report, { quiet: true }), 'all 3 projects ok');
+});
+
+test('quiet Markdown keeps only non-OK rows and ends with the summary', () => {
+  const md = formatMarkdown(quietReport(), { quiet: true });
+  const lines = md.split('\n');
+  assert.ok(!md.includes('clean-app'));
+  assert.ok(!md.includes('games'));
+  assert.ok(lines.some((line) => line.startsWith('| legacy-app | WARN')));
+  assert.ok(lines.some((line) => line.startsWith('- **legacy-app** WARN')));
+  assert.equal(lines[lines.length - 1], '3 projects — 2 ok, 1 warn, 0 fail');
+  assert.equal(lines.filter((line) => /^\| (?!project |---)/.test(line)).length, 1);
+});
+
+test('quiet Markdown collapses an all-green report to one line', () => {
+  const report = {
+    generatedAt: '2026-10-22T12:00:00.000Z',
+    config: '/tmp/projects.json',
+    summary: { projects: 3, ok: 3, warn: 0, fail: 0 },
+    projects: [
+      quietProject('one', 'ok'),
+      quietProject('two', 'ok'),
+      quietProject('three', 'ok')
+    ]
+  };
+  assert.equal(formatMarkdown(report, { quiet: true }), 'all 3 projects ok');
+});
+
+test('the CLI --quiet hides OK projects while --json ignores it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-auditor-quiet-'));
+  const goodRoot = tempProject();
+  const badRoot = tempProject();
+  cleanProject(goodRoot);
+  cleanProject(badRoot);
+  fs.unlinkSync(path.join(badRoot, 'docs/CODEMAP.md'));
+
+  const configPath = path.join(dir, 'projects.json');
+  fs.writeFileSync(configPath, JSON.stringify({
+    projects: [
+      {
+        name: 'good-app',
+        root: goodRoot,
+        docs: {
+          agents: 'AGENTS.md',
+          readme: 'README.md',
+          index: 'docs/00-index.md',
+          state: 'docs/CURRENT_STATE.md',
+          codemap: 'docs/CODEMAP.md'
+        }
+      },
+      {
+        name: 'bad-app',
+        root: badRoot,
+        docs: {
+          agents: 'AGENTS.md',
+          readme: 'README.md',
+          index: 'docs/00-index.md',
+          state: 'docs/CURRENT_STATE.md',
+          codemap: 'docs/CODEMAP.md'
+        }
+      }
+    ]
+  }));
+
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const quiet = spawnSync(
+    process.execPath,
+    [script, '--config', configPath, '--quiet', '--warn-days', '15', '--fail-days', '30'],
+    { encoding: 'utf8' }
+  );
+  assert.equal(quiet.status, 1, 'quiet keeps the failing exit code');
+  assert.ok(quiet.stdout.includes('bad-app'));
+  assert.ok(!quiet.stdout.includes('good-app'));
+  assert.equal(quiet.stdout.trim().split('\n').pop(), '2 projects — 1 ok, 0 warn, 1 fail');
+
+  const json = spawnSync(
+    process.execPath,
+    [script, '--config', configPath, '--json', '--quiet', '--warn-days', '15', '--fail-days', '30'],
+    { encoding: 'utf8' }
+  );
+  assert.equal(json.status, 1);
+  const parsed = JSON.parse(json.stdout);
+  assert.deepEqual(parsed.projects.map((p) => p.name), ['good-app', 'bad-app']);
 });
 
 test('formatMarkdown renders a table header and FAIL findings as bullets', () => {

@@ -431,8 +431,56 @@ function auditAll(config, options) {
   };
 }
 
+function summaryLine(report) {
+  return report.summary.projects + ' projects — ' +
+    report.summary.ok + ' ok, ' + report.summary.warn + ' warn, ' +
+    report.summary.fail + ' fail';
+}
+
+function textProjectLines(project, opts, nameWidth) {
+  const lines = [];
+  const state = project.state
+    ? project.state.updated
+      ? project.state.updated + ' (' + project.state.ageDays + 'd)'
+      : 'undated'
+    : 'no state';
+  const gate = project.gate ? 'gate ' + project.gate.status : 'no gate';
+  const counts = [];
+  if (project.counts.fail) counts.push(project.counts.fail + ' fail');
+  if (project.counts.warn) counts.push(project.counts.warn + ' warn');
+  lines.push(
+    project.name.padEnd(nameWidth) + '  ' +
+    project.status.toUpperCase().padEnd(4) + '  ' +
+    'state ' + state.padEnd(18) + '  ' +
+    'docs ' + project.metrics.docsPresent + '/' + project.metrics.docs + '  ' +
+    'links ' + project.metrics.linksChecked + '  ' +
+    gate + (counts.length ? '  ' + counts.join(', ') : '')
+  );
+  const findings = project.findings.filter((f) => opts.verbose || f.level !== 'info');
+  for (const finding of findings) {
+    lines.push('  ' + finding.level.toUpperCase().padEnd(4) + '  [' + finding.code + '] ' + finding.message);
+  }
+  return lines;
+}
+
+function visibleProjects(report) {
+  return report.projects.filter((project) => project.status !== 'ok');
+}
+
+function formatQuietText(report, opts) {
+  const visible = visibleProjects(report);
+  if (!visible.length) return 'all ' + report.projects.length + ' projects ok';
+  const lines = [];
+  const nameWidth = Math.max(8, ...visible.map((p) => p.name.length));
+  for (const project of visible) lines.push(...textProjectLines(project, opts, nameWidth));
+  lines.push('');
+  lines.push(summaryLine(report));
+  return lines.join('\n');
+}
+
 function formatText(report, options) {
   const opts = options || {};
+  if (opts.quiet) return formatQuietText(report, opts);
   const lines = [];
   lines.push('docs-auditor — ' + report.projects.length + ' project(s)');
   lines.push('config: ' + report.config);
@@ -440,35 +488,11 @@ function formatText(report, options) {
 
   const nameWidth = Math.max(8, ...report.projects.map((p) => p.name.length));
   for (const project of report.projects) {
-    const state = project.state
-      ? project.state.updated
-        ? project.state.updated + ' (' + project.state.ageDays + 'd)'
-        : 'undated'
-      : 'no state';
-    const gate = project.gate ? 'gate ' + project.gate.status : 'no gate';
-    const counts = [];
-    if (project.counts.fail) counts.push(project.counts.fail + ' fail');
-    if (project.counts.warn) counts.push(project.counts.warn + ' warn');
-    lines.push(
-      project.name.padEnd(nameWidth) + '  ' +
-      project.status.toUpperCase().padEnd(4) + '  ' +
-      'state ' + state.padEnd(18) + '  ' +
-      'docs ' + project.metrics.docsPresent + '/' + project.metrics.docs + '  ' +
-      'links ' + project.metrics.linksChecked + '  ' +
-      gate + (counts.length ? '  ' + counts.join(', ') : '')
-    );
-    const findings = project.findings.filter((f) => opts.verbose || f.level !== 'info');
-    for (const finding of findings) {
-      lines.push('  ' + finding.level.toUpperCase().padEnd(4) + '  [' + finding.code + '] ' + finding.message);
-    }
+    lines.push(...textProjectLines(project, opts, nameWidth));
   }
 
   lines.push('');
-  lines.push(
-    report.summary.projects + ' projects — ' +
-    report.summary.ok + ' ok, ' + report.summary.warn + ' warn, ' +
-    report.summary.fail + ' fail'
-  );
+  lines.push(summaryLine(report));
   return lines.join('\n');
 }
 
@@ -478,34 +502,27 @@ function escapeCell(value) {
     .replace(/\r?\n/g, ' ');
 }
 
-function formatMarkdown(report, options) {
-  const opts = options || {};
-  const lines = [];
-  lines.push('generated: ' + (report.generatedAt || new Date().toISOString()));
-  lines.push('');
-  lines.push('| project | status | state | docs | links | gate |');
-  lines.push('| --- | --- | --- | --- | --- | --- |');
+function markdownProjectRow(project) {
+  const state = project.state
+    ? project.state.updated
+      ? project.state.updated + ' (' + project.state.ageDays + 'd)'
+      : 'undated'
+    : 'no state';
+  const gate = project.gate ? project.gate.status : 'none';
+  const cells = [
+    project.name,
+    project.status.toUpperCase(),
+    state,
+    project.metrics.docsPresent + '/' + project.metrics.docs,
+    project.metrics.linksChecked,
+    gate
+  ];
+  return '| ' + cells.map(escapeCell).join(' | ') + ' |';
+}
 
-  for (const project of report.projects) {
-    const state = project.state
-      ? project.state.updated
-        ? project.state.updated + ' (' + project.state.ageDays + 'd)'
-        : 'undated'
-      : 'no state';
-    const gate = project.gate ? project.gate.status : 'none';
-    const cells = [
-      project.name,
-      project.status.toUpperCase(),
-      state,
-      project.metrics.docsPresent + '/' + project.metrics.docs,
-      project.metrics.linksChecked,
-      gate
-    ];
-    lines.push('| ' + cells.map(escapeCell).join(' | ') + ' |');
-  }
-
+function markdownFindingLines(projects, opts) {
   const findings = [];
-  for (const project of report.projects) {
+  for (const project of projects) {
     for (const finding of project.findings) {
       if (!opts.verbose && finding.level === 'info') continue;
       findings.push(
@@ -514,6 +531,44 @@ function formatMarkdown(report, options) {
       );
     }
   }
+  return findings;
+}
+
+function formatQuietMarkdown(report, opts) {
+  const visible = visibleProjects(report);
+  if (!visible.length) return 'all ' + report.projects.length + ' projects ok';
+  const lines = [];
+  lines.push('generated: ' + (report.generatedAt || new Date().toISOString()));
+  lines.push('');
+  lines.push('| project | status | state | docs | links | gate |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
+  for (const project of visible) lines.push(markdownProjectRow(project));
+
+  const findings = markdownFindingLines(visible, opts);
+  if (findings.length) {
+    lines.push('');
+    lines.push(...findings);
+  }
+
+  lines.push('');
+  lines.push(summaryLine(report));
+  return lines.join('\n');
+}
+
+function formatMarkdown(report, options) {
+  const opts = options || {};
+  if (opts.quiet) return formatQuietMarkdown(report, opts);
+  const lines = [];
+  lines.push('generated: ' + (report.generatedAt || new Date().toISOString()));
+  lines.push('');
+  lines.push('| project | status | state | docs | links | gate |');
+  lines.push('| --- | --- | --- | --- | --- | --- |');
+
+  for (const project of report.projects) {
+    lines.push(markdownProjectRow(project));
+  }
+
+  const findings = markdownFindingLines(report.projects, opts);
   if (findings.length) {
     lines.push('');
     lines.push(...findings);

@@ -13,6 +13,7 @@ copy projects.example.json projects.json   # then point the roots at your projec
 node docs-auditor.js
 node docs-auditor.js --json
 node docs-auditor.js --md
+node docs-auditor.js --quiet
 node docs-auditor.js --project web-app
 node docs-auditor.js --strict --run-gates
 node docs-auditor.js --warn-days 3 --fail-days 14   # tighten thresholds for CI
@@ -74,6 +75,20 @@ generated: 2026-10-22T12:00:00.000Z
 
 `--md` replaces the text report; it cannot be combined with `--json`. `--verbose` adds info
 findings as bullets, as it does for the text report.
+
+### Quiet
+
+`--quiet` trims the text and `--md` reports to the projects that are not `OK` (WARN or FAIL),
+followed by the usual summary line. When every project is green it prints a single line:
+
+```text
+all 3 projects ok
+```
+
+The exit codes do not change, so `--quiet` is safe in CI. `--json` ignores `--quiet` and always
+emits the full report, so machine consumers still see every project. With `--md`, the generated
+line and table header stay so the table stays valid Markdown; only the rows and findings for
+non-OK projects are printed.
 
 ## Config
 
