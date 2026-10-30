@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown, formatText } = require('../audit');
+const { checkProject, checkLinks, loadConfig, parseFrontMatter, formatMarkdown, formatText, auditAll } = require('../audit');
 
 function tempProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-auditor-'));
@@ -501,3 +501,95 @@ test('formatMarkdown renders a table header and FAIL findings as bullets', () =>
   );
   assert.equal(lines.filter((line) => line.startsWith('- ')).length, 1);
 });
+
+const DOCS = {
+  agents: 'AGENTS.md',
+  readme: 'README.md',
+  index: 'docs/00-index.md',
+  state: 'docs/CURRENT_STATE.md',
+  codemap: 'docs/CODEMAP.md'
+};
+
+function onlyFixture() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-auditor-only-'));
+  const roots = {};
+  const projects = ['alpha-app', 'beta-app', 'gamma-app'].map((name) => {
+    const root = tempProject();
+    cleanProject(root);
+    roots[name] = root;
+    return { name, root, docs: { ...DOCS } };
+  });
+  const configPath = path.join(dir, 'projects.json');
+  fs.writeFileSync(configPath, JSON.stringify({ projects }));
+  return { configPath, roots };
+}
+
+test('--only audits just the comma-separated aliases in --json output', () => {
+  const { configPath } = onlyFixture();
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const run = spawnSync(
+    process.execPath,
+    [script, '--config', configPath, '--json', '--only', 'alpha-app, gamma-app',
+      '--warn-days', '15', '--fail-days', '30'],
+    { encoding: 'utf8' }
+  );
+  assert.equal(run.status, 0);
+  const parsed = JSON.parse(run.stdout);
+  assert.deepEqual(parsed.projects.map((p) => p.name), ['alpha-app', 'gamma-app']);
+  assert.deepEqual(parsed.summary, { projects: 2, ok: 2, warn: 0, fail: 0 });
+});
+
+test('--only with an unknown alias exits 2 and names it', () => {
+  const { configPath } = onlyFixture();
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const run = spawnSync(
+    process.execPath,
+    [script, '--config', configPath, '--only', 'alpha-app,nope-app'],
+    { encoding: 'utf8' }
+  );
+  assert.equal(run.status, 2);
+  assert.ok(run.stderr.includes('unknown project: nope-app'));
+});
+
+test('--only without a list exits 2', () => {
+  const { configPath } = onlyFixture();
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const run = spawnSync(
+    process.execPath,
+    [script, '--config', configPath, '--only', ' , '],
+    { encoding: 'utf8' }
+  );
+  assert.equal(run.status, 2);
+  assert.ok(run.stderr.includes('--only needs a comma list of project names'));
+});
+
+test('--only works with --md and --quiet, leaving other projects out', () => {
+  const { configPath, roots } = onlyFixture();
+  fs.unlinkSync(path.join(roots['beta-app'], 'docs/CODEMAP.md'));
+  const script = path.join(__dirname, '..', 'docs-auditor.js');
+  const base = [script, '--config', configPath, '--only', 'alpha-app,beta-app',
+    '--warn-days', '15', '--fail-days', '30'];
+
+  const md = spawnSync(process.execPath, base.concat('--md'), { encoding: 'utf8' });
+  assert.equal(md.status, 1);
+  assert.ok(md.stdout.includes('| alpha-app | OK'));
+  assert.ok(md.stdout.includes('| beta-app | FAIL'));
+  assert.ok(!md.stdout.includes('gamma-app'));
+
+  const quiet = spawnSync(process.execPath, base.concat('--quiet'), { encoding: 'utf8' });
+  assert.equal(quiet.status, 1);
+  assert.ok(quiet.stdout.includes('beta-app'));
+  assert.ok(!quiet.stdout.includes('alpha-app'));
+  assert.ok(!quiet.stdout.includes('gamma-app'));
+  assert.equal(quiet.stdout.trim().split('\n').pop(), '2 projects — 1 ok, 0 warn, 1 fail');
+});
+
+test('auditAll rejects unknown --only aliases before auditing', () => {
+  const { configPath } = onlyFixture();
+  const config = loadConfig(configPath);
+  assert.throws(() => auditAll(config, { only: ['alpha-app', 'ghost'], now: NOW }),
+    /unknown project: ghost/);
+  const report = auditAll(config, { only: ['beta-app'], now: NOW });
+  assert.deepEqual(report.projects.map((p) => p.name), ['beta-app']);
+});
+

@@ -412,10 +412,24 @@ function checkProject(project, options) {
   return result;
 }
 
+function selectProjects(config, options) {
+  const opts = options || {};
+  const only = Array.isArray(opts.only) && opts.only.length ? opts.only : null;
+  if (only) {
+    const known = new Set(config.projects.map((project) => project.name));
+    const unknown = only.filter((name) => !known.has(name));
+    if (unknown.length) throw new Error('unknown project: ' + unknown.join(', '));
+  }
+  return config.projects.filter((project) => {
+    if (opts.project && project.name !== opts.project) return false;
+    if (only && !only.includes(project.name)) return false;
+    return true;
+  });
+}
+
 function auditAll(config, options) {
   const opts = options || {};
-  const results = config.projects
-    .filter((project) => !opts.project || project.name === opts.project)
+  const results = selectProjects(config, opts)
     .map((project) => checkProject(project, opts));
   const summary = {
     projects: results.length,
@@ -580,6 +594,7 @@ function formatMarkdown(report, options) {
 module.exports = {
   loadConfig,
   checkProject,
+  selectProjects,
   auditAll,
   formatText,
   formatMarkdown,

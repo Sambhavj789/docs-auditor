@@ -14,6 +14,7 @@ function usage() {
     'Options:',
     '  --config <path>   Config file (default: projects.json next to this script)',
     '  --project <name>  Audit one project',
+    '  --only <a,b>      Audit only the comma-separated project names',
     '  --json            Print machine-readable JSON',
     '  --md              Print a Markdown table instead of the text report',
     '  --quiet           Only show projects that are not OK (text and --md)',
@@ -37,6 +38,21 @@ function positiveDays(flag, raw) {
   return value;
 }
 
+function onlyList(raw) {
+  const text = raw === undefined || raw === null ? '' : String(raw);
+  const names = text.split(',').map((name) => name.trim()).filter(Boolean);
+  if (!names.length) throw new Error('--only needs a comma list of project names');
+  return names;
+}
+
+function mergeOnly(current, names) {
+  const merged = current ? current.slice() : [];
+  for (const name of names) {
+    if (!merged.includes(name)) merged.push(name);
+  }
+  return merged;
+}
+
 function parseArgs(argv) {
   const opts = {
     config: path.join(__dirname, 'projects.json'),
@@ -45,7 +61,8 @@ function parseArgs(argv) {
     quiet: false,
     strict: false,
     runGates: false,
-    verbose: false
+    verbose: false,
+    only: null
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -66,6 +83,9 @@ function parseArgs(argv) {
     else if (arg === '--project') {
       opts.project = argv[++i];
       if (!opts.project) throw new Error('--project needs a name');
+    }
+    else if (arg === '--only') {
+      opts.only = mergeOnly(opts.only, onlyList(argv[++i]));
     }
     else throw new Error('Unknown option: ' + arg);
   }

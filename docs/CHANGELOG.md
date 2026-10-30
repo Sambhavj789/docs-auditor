@@ -8,6 +8,9 @@ updated: 2026-10-22
 
 ## Unreleased — 2026-10-22
 
+- Added `--only <a,b>`: audit only the comma-separated project aliases in one run. Unknown aliases
+  exit 2 with `unknown project: <name>`. It works with `--json`, `--md`, and `--quiet`, and the
+  summary counts only the selected projects; runs without the flag are unchanged.
 - Added `--quiet`: the text and `--md` reports show only projects whose status is not `ok`
   (warn/fail) plus the summary line. When every project is green, the output is a single line,
   `all N projects ok`. Exit codes are unchanged, and `--json` ignores `--quiet` and keeps the full

@@ -15,6 +15,7 @@ node docs-auditor.js --json
 node docs-auditor.js --md
 node docs-auditor.js --quiet
 node docs-auditor.js --project web-app
+node docs-auditor.js --only web-app,mobile   # audit just these aliases
 node docs-auditor.js --strict --run-gates
 node docs-auditor.js --warn-days 3 --fail-days 14   # tighten thresholds for CI
 ```
@@ -32,6 +33,10 @@ Exit codes: `0` green or warnings, `1` red, `2` config error. `--strict` turns w
 `--warn-days <n>` and `--fail-days <n>` override the `warnDays`/`failDays` values in `projects.json`
 for every project in the run, so CI can tighten the thresholds without editing the local config.
 Both need a positive integer; anything else exits 2.
+
+`--only <a,b>` runs the audit for just the comma-separated project aliases (spaces around commas
+are ignored). An unknown alias exits 2 with `unknown project: <name>`. It combines with `--json`,
+`--md`, and `--quiet`, and the summary covers only the selected projects.
 
 ## What it checks
 
