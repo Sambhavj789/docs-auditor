@@ -62,6 +62,17 @@ function cleanProject(root) {
   write(root, 'app.js', "'use strict';\n");
 }
 
+// The --only tests run the real CLI (real clock), so their fixture docs must carry
+// today's date: "fresh" has to stay fresh instead of ageing past --warn-days.
+function freshenProject(root) {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const rel of ['docs/00-index.md', 'docs/CURRENT_STATE.md', 'docs/CODEMAP.md']) {
+    const full = path.join(root, rel);
+    const text = fs.readFileSync(full, 'utf8').replace(/^updated: .*$/m, 'updated: ' + today);
+    fs.writeFileSync(full, text);
+  }
+}
+
 function project(root) {
   return {
     name: 'fixture',
@@ -412,6 +423,8 @@ test('the CLI --quiet hides OK projects while --json ignores it', () => {
   const badRoot = tempProject();
   cleanProject(goodRoot);
   cleanProject(badRoot);
+  freshenProject(goodRoot);
+  freshenProject(badRoot);
   fs.unlinkSync(path.join(badRoot, 'docs/CODEMAP.md'));
 
   const configPath = path.join(dir, 'projects.json');
@@ -516,6 +529,7 @@ function onlyFixture() {
   const projects = ['alpha-app', 'beta-app', 'gamma-app'].map((name) => {
     const root = tempProject();
     cleanProject(root);
+    freshenProject(root);
     roots[name] = root;
     return { name, root, docs: { ...DOCS } };
   });
