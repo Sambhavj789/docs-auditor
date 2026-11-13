@@ -1,12 +1,17 @@
 ---
 title: docs-auditor Current State
 status: active
-updated: 2026-10-22
+updated: 2026-11-13
 ---
 
 # Current State
 
 ## Works
+
+- **2026-11-13 HQ merge pass:** `worker/mill-da-02` (`--only`) and `worker/mill-da-06` (SPEC sync)
+  merged into `main`; fixture dates in `test/audit.test.js` now use today (the hardcoded 2026-10-22 had
+  aged past `--warn-days 15` and broke the `--only`/`--quiet` CLI tests). Gate: `node --test test/audit.test.js`
+  **28/28**, `node verify-docs.js` **68/68**; pushed (`62780f4`).
 
 - Audits every project in one local `projects.json` (example: `projects.example.json`).
 - Checks required docs, front matter, state age, index coverage, relative links, CODEMAP gaps, and
